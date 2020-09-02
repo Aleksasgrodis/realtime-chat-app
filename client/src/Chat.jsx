@@ -3,20 +3,28 @@ import {
   ApolloClient,
   InMemoryCache,
   ApolloProvider,
-  useQuery,
+  useSubscription,
   gql,
-  useMutation
+  useMutation,
 } from '@apollo/client';
-
+import { WebSocketLink } from '@apollo/client/link/ws';
 import { Container, Row, Col, FormInput, Button } from 'shards-react';
 
+const link = new WebSocketLink({
+  uri: 'ws://localhost:4000/',
+  options: {
+    reconnect: true,
+  },
+});
+
 const client = new ApolloClient({
+  link,
   uri: 'http://localhost:4000/',
   cache: new InMemoryCache(),
 });
 
 const GET_MESSAGES = gql`
-  query {
+  subscription {
     messages {
       id
       content
@@ -26,13 +34,13 @@ const GET_MESSAGES = gql`
 `;
 
 const POST_MESSAGE = gql`
-mutation ($user:String!, $content:String!) { 
-	postMessage(user: $user, content: $content)
-}
+  mutation($user: String!, $content: String!) {
+    postMessage(user: $user, content: $content)
+  }
 `;
 
 const Messages = ({ user }) => {
-  const { data } = useQuery(GET_MESSAGES, {
+  const { data } = useSubscription(GET_MESSAGES, {
     pollInterval: 500,
   });
   if (!data) {
@@ -87,7 +95,7 @@ const Chat = () => {
     user: 'Jack',
     content: '',
   });
-  const [postMessage] = useMutation(POST_MESSAGE)
+  const [postMessage] = useMutation(POST_MESSAGE);
   const onSend = () => {
     if (state.content.length > 0) {
       postMessage({
@@ -96,9 +104,9 @@ const Chat = () => {
     }
     setState({
       ...state,
-      content: "",
-    })
-  }
+      content: '',
+    });
+  };
   return (
     <Container>
       <Messages user={state.user} />
@@ -126,16 +134,14 @@ const Chat = () => {
               })
             }
             onKeyUp={e => {
-              if (e.keyCode === 13){
+              if (e.keyCode === 13) {
                 onSend();
               }
             }}
           />
         </Col>
         <Col xs={2} style={{ padding: 0 }}>
-          <Button onClick={() => onSend()}>
-            Send
-          </Button>
+          <Button onClick={() => onSend()}>Send</Button>
         </Col>
       </Row>
     </Container>
